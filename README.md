@@ -1,2 +1,2 @@
-# java-concurrency-basics
-Introduction to Concurrency and Parallelism in Java
+# Introduction to Concurrency and Parallelism in Java
+
