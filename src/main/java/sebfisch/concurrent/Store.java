@@ -16,7 +16,7 @@ public class Store<D> {
     private Set<CompletableFuture<Void>> activeTasks = ConcurrentHashMap.newKeySet();
 
     public Store(D data) {
-        this(Executors.newFixedThreadPool(4), data);
+        this(Executors.newCachedThreadPool(), data);
     }
 
     public Store(ExecutorService executor, D data) {

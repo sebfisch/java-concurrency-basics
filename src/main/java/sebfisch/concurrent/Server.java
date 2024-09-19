@@ -2,18 +2,18 @@ package sebfisch.concurrent;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 
 public class Server<I, O> {
     Executor executor;
     Handler<I, O> handler;
 
-    Server(Handler<I, O> handler) {
-        this(ForkJoinPool.commonPool(), handler);
+    public Server(Handler<I, O> handler) {
+        this(Executors.newCachedThreadPool(), handler);
     }
 
-    Server(Executor executor, Handler<I, O> handler) {
+    public Server(Executor executor, Handler<I, O> handler) {
         this.executor = executor;
         this.handler = handler;
     }
