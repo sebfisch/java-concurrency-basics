@@ -64,6 +64,9 @@ public class SingleThreadExecutor implements Executor {
     private synchronized Runnable getQueuedTask() throws InterruptedException {
         while (queuedTasks.isEmpty()) {
             wait();
+            if (isTerminated()) {
+                Thread.currentThread().interrupt();
+            }
         }
         return queuedTasks.removeFirst();
     }

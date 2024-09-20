@@ -55,6 +55,7 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
                 try {
                     if (isTerminated()) {
                         allTasksExecuted.signalAll();
+                        break;
                     }
                 } finally {
                     lock.unlock();
@@ -68,6 +69,9 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         try {
             while (queuedTasks.isEmpty()) {
                 someTaskAvailable.await();
+                if (isTerminated()) {
+                    Thread.currentThread().interrupt();
+                }
             }
             return queuedTasks.removeFirst();
         } finally {
