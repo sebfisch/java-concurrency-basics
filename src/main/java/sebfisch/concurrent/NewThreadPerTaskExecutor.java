@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 public class NewThreadPerTaskExecutor implements Executor {
     private boolean isShutdown = false;
@@ -13,7 +14,7 @@ public class NewThreadPerTaskExecutor implements Executor {
     @Override
     public synchronized void execute(Runnable task) {
         if (isShutdown) {
-            throw new IllegalStateException("Executor has been shut down");
+            throw new RejectedExecutionException("Executor has been shut down");
         }
         Thread worker = new Thread(() -> runTask(task));
         activeThreads.add(worker);

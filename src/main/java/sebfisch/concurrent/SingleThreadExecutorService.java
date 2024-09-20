@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -15,8 +16,8 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
     private boolean isShutdown = false;
 
     private final Lock lock = new ReentrantLock();
-    private final Condition allTasksExecuted = lock.newCondition();
-    private final Condition someTaskAvailable = lock.newCondition();
+    private final Condition terminated = lock.newCondition();
+    private final Condition taskAvailable = lock.newCondition();
 
     public SingleThreadExecutorService() {
         worker = new Thread(this::runQueuedTasks);
@@ -28,10 +29,10 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         lock.lock();
         try {
             if (isShutdown) {
-                throw new IllegalStateException("Executor has been shut down");
+                throw new RejectedExecutionException("Executor has been shut down");
             }
             queuedTasks.addLast(task);
-            someTaskAvailable.signal();
+            taskAvailable.signal();
         } finally {
             lock.unlock();
         }
@@ -50,17 +51,13 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
                 task.run();
             } catch (Exception exception) {
                 System.err.println(exception.getMessage());
-            } finally {
-                lock.lock();
-                try {
-                    if (isTerminated()) {
-                        allTasksExecuted.signalAll();
-                        break;
-                    }
-                } finally {
-                    lock.unlock();
-                }
             }
+        }
+        lock.lock();
+        try {
+            terminated.signalAll();
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -68,10 +65,10 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         lock.lock();
         try {
             while (queuedTasks.isEmpty()) {
-                someTaskAvailable.await();
                 if (isTerminated()) {
-                    Thread.currentThread().interrupt();
+                    throw new InterruptedException();
                 }
+                taskAvailable.await();
             }
             return queuedTasks.removeFirst();
         } finally {
@@ -94,7 +91,7 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         lock.lock();
         try {
             isShutdown = true;
-            someTaskAvailable.signalAll();
+            taskAvailable.signal();
         } finally {
             lock.unlock();
         }
@@ -105,10 +102,10 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         lock.lock();
         try {
             isShutdown = true;
-            final List<Runnable> pending = new ArrayList<>(queuedTasks);
+            final List<Runnable> pendingTasks = new ArrayList<>(queuedTasks);
             queuedTasks.clear();
             worker.interrupt();
-            return pending;
+            return pendingTasks;
         } finally {
             lock.unlock();
         }
@@ -130,7 +127,7 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         try {
             long nanos = unit.toNanos(timeout);
             while (!isTerminated() && nanos > 0) {
-                nanos = allTasksExecuted.awaitNanos(nanos);
+                nanos = terminated.awaitNanos(nanos);
             }
             return isTerminated();
         } finally {

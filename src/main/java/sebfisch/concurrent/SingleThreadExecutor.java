@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 public class SingleThreadExecutor implements Executor {
     private final Thread worker;
@@ -20,7 +21,7 @@ public class SingleThreadExecutor implements Executor {
     @Override
     public synchronized void execute(Runnable task) {
         if (isShutdown) {
-            throw new IllegalStateException("Executor has been shut down");
+            throw new RejectedExecutionException("Executor has been shut down");
         }
         queuedTasks.addLast(task);
         notify();
@@ -51,22 +52,19 @@ public class SingleThreadExecutor implements Executor {
                 task.run();
             } catch (Exception exception) {
                 System.err.println(exception.getMessage());
-            } finally {
-                synchronized (this) {
-                    if (isTerminated()) {
-                        notifyAll();
-                    }
-                }
             }
+        }
+        synchronized (this) {
+            notifyAll(); // notify threads that are waiting for termination
         }
     }
 
     private synchronized Runnable getQueuedTask() throws InterruptedException {
         while (queuedTasks.isEmpty()) {
-            wait();
             if (isTerminated()) {
-                Thread.currentThread().interrupt();
+                throw new InterruptedException();
             }
+            wait();
         }
         return queuedTasks.removeFirst();
     }
@@ -77,15 +75,15 @@ public class SingleThreadExecutor implements Executor {
 
     public synchronized void shutdown() {
         isShutdown = true;
-        notifyAll();
+        notifyAll(); // notify worker if waiting for tasks
     }
 
     public synchronized List<Runnable> shutdownNow() {
         isShutdown = true;
-        final List<Runnable> pending = new ArrayList<>(queuedTasks);
+        final List<Runnable> pendingTasks = new ArrayList<>(queuedTasks);
         queuedTasks.clear();
         worker.interrupt();
-        return pending;
+        return pendingTasks;
     }
 
     public synchronized boolean isTerminated() {

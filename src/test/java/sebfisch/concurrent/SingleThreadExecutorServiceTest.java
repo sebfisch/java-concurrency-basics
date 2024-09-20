@@ -11,6 +11,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -45,7 +46,7 @@ public class SingleThreadExecutorServiceTest {
     public void testSubmittingTaskAfterShutdown() throws InterruptedException {
         try (final ExecutorService executor = new SingleThreadExecutorService()) {
             executor.shutdown();
-            assertThrows(IllegalStateException.class, () -> executor.execute(() -> {
+            assertThrows(RejectedExecutionException.class, () -> executor.execute(() -> {
             }));
         }
     }
