@@ -3,7 +3,10 @@ package sebfisch.concurrent;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 public class SingleThreadExecutor implements Executor {
     private final Thread worker;
@@ -22,6 +25,12 @@ public class SingleThreadExecutor implements Executor {
         }
         queuedTasks.addLast(task);
         notify();
+    }
+
+    public <T> Future<T> submit(Callable<T> callable) {
+        FutureTask<T> future = new FutureTask<>(callable);
+        execute(future);
+        return future;
     }
 
     private void runQueuedTasks() {

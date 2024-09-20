@@ -5,7 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -91,8 +95,80 @@ public class SingleThreadExecutorTest {
                         Thread.currentThread().interrupt();
                     }
                 }));
-        executor.shutdownNow(); // causes InterruptedException in sleeping tasks
+        TimeUnit.SECONDS.sleep(1); // wait for first task to start
+        List<Runnable> pending = executor.shutdownNow();
+        assertEquals(taskCount - 1, pending.size());
         executor.awaitTermination();
         assertTrue(executor.isTerminated());
+    }
+
+    @Test
+    public void testSubmit() throws Exception {
+        final int result = 42;
+        final SingleThreadExecutor executor = new SingleThreadExecutor();
+        assertEquals(result, executor.submit(() -> 42).get());
+    }
+
+    @Test
+    public void testFutureStatesWithNormalExecution() throws InterruptedException {
+        final SingleThreadExecutor executor = new SingleThreadExecutor();
+        final Future<Void> future = executor.submit(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return null;
+        });
+        assertEquals(Future.State.RUNNING, future.state());
+        executor.shutdown();
+        executor.awaitTermination();
+        assertEquals(Future.State.SUCCESS, future.state());
+    }
+
+    @Test
+    public void testFutureStateWithCancelledExecution() throws InterruptedException {
+        final SingleThreadExecutor executor = new SingleThreadExecutor();
+        final Future<Void> future = executor.submit(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return null;
+        });
+        future.cancel(true);
+        assertEquals(Future.State.CANCELLED, future.state());
+        executor.shutdown();
+        executor.awaitTermination();
+        assertThrows(CancellationException.class, future::get);
+    }
+
+    @Test
+    public void testFutureStateWithFailedExecution() throws InterruptedException {
+        final SingleThreadExecutor executor = new SingleThreadExecutor();
+        final Future<Void> future = executor.submit(() -> {
+            throw new RuntimeException("failure");
+        });
+        assertEquals(Future.State.RUNNING, future.state());
+        executor.shutdown();
+        executor.awaitTermination();
+        assertEquals(Future.State.FAILED, future.state());
+        assertThrows(ExecutionException.class, future::get);
+    }
+
+    @Test
+    public void testFutureResultWithInterruptedExecution() throws InterruptedException {
+        final SingleThreadExecutor executor = new SingleThreadExecutor();
+        final Future<Void> future = executor.submit(() -> {
+            TimeUnit.SECONDS.sleep(10);
+            return null;
+        });
+        assertEquals(Future.State.RUNNING, future.state());
+        TimeUnit.SECONDS.sleep(1); // wait for task to start
+        List<Runnable> pending = executor.shutdownNow();
+        assertTrue(pending.isEmpty());
+        executor.awaitTermination();
+        assertThrows(ExecutionException.class, future::get);
     }
 }

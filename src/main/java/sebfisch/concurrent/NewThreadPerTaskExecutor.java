@@ -2,7 +2,10 @@ package sebfisch.concurrent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 public class NewThreadPerTaskExecutor implements Executor {
     private boolean isShutdown = false;
@@ -16,6 +19,12 @@ public class NewThreadPerTaskExecutor implements Executor {
         Thread worker = new Thread(() -> runTask(task));
         activeThreads.add(worker);
         worker.start();
+    }
+
+    public <T> Future<T> submit(Callable<T> callable) {
+        FutureTask<T> future = new FutureTask<>(callable);
+        execute(future);
+        return future;
     }
 
     private void runTask(Runnable task) {
