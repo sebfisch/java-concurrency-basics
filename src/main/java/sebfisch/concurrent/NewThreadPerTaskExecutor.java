@@ -3,9 +3,8 @@ package sebfisch.concurrent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 
 public class NewThreadPerTaskExecutor implements Executor {
     private boolean isShutdown = false;
@@ -21,9 +20,15 @@ public class NewThreadPerTaskExecutor implements Executor {
         worker.start();
     }
 
-    public <T> Future<T> submit(Callable<T> callable) {
-        FutureTask<T> future = new FutureTask<>(callable);
-        execute(future);
+    public <T> CompletableFuture<T> submit(Callable<T> callable) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        execute(() -> {
+            try {
+                future.complete(callable.call());
+            } catch (Exception exception) {
+                future.completeExceptionally(exception);
+            }
+        });
         return future;
     }
 
