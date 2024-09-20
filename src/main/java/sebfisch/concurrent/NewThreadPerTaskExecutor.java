@@ -13,23 +13,46 @@ public class NewThreadPerTaskExecutor implements Executor {
         if (isShutdown) {
             throw new IllegalStateException("Executor has been shut down");
         }
-        Thread worker = new Thread(() -> {
-            try {
-                task.run();
-            } finally {
-                synchronized (this) {
-                    activeThreads.remove(Thread.currentThread());
-                }
-            }
-        });
+        Thread worker = new Thread(() -> runTask(task));
         activeThreads.add(worker);
         worker.start();
     }
 
-    public synchronized void shutdownNow() {
+    private void runTask(Runnable task) {
+        try {
+            task.run();
+        } finally {
+            synchronized (this) {
+                activeThreads.remove(Thread.currentThread());
+                if (isTerminated()) {
+                    notifyAll();
+                }
+            }
+        }
+    }
+
+    public synchronized boolean isShutdown() {
+        return isShutdown;
+    }
+
+    public synchronized void shutdown() {
         isShutdown = true;
+    }
+
+    public synchronized void shutdownNow() {
+        shutdown();
         for (Thread worker : activeThreads) {
             worker.interrupt();
+        }
+    }
+
+    public synchronized boolean isTerminated() {
+        return isShutdown && activeThreads.isEmpty();
+    }
+
+    public synchronized void awaitTermination() throws InterruptedException {
+        while (!isTerminated()) {
+            wait();
         }
     }
 }
