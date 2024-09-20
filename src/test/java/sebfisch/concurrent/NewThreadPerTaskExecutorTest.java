@@ -100,7 +100,7 @@ public class NewThreadPerTaskExecutorTest {
     }
 
     @Test
-    public void testSubmit() throws Exception {
+    public void testSubmit() throws InterruptedException, ExecutionException {
         final int result = 42;
         final NewThreadPerTaskExecutor executor = new NewThreadPerTaskExecutor();
         assertEquals(result, executor.submit(() -> 42).get());
