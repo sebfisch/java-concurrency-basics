@@ -1,6 +1,7 @@
 package sebfisch.concurrent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -15,14 +16,21 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class SingleThreadExecutorTest {
+public class OwnNewThreadPerTaskExecutorTest {
+    private NewThreadPerTaskExecutor executor;
+
+    @BeforeEach
+    public void setUp() {
+        executor = new NewThreadPerTaskExecutor();
+    }
+
     @Test
-    public void testThatSameThreadIsUsedForEachTask() throws InterruptedException {
+    public void testThatNewThreadIsCreatedForEachTask() throws InterruptedException {
         final int taskCount = 10;
-        final int threadCount = 1;
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final Set<String> threadNames = new HashSet<>();
         IntStream.range(0, taskCount)
                 .forEach(n -> executor.execute(() -> {
@@ -32,19 +40,19 @@ public class SingleThreadExecutorTest {
                 }));
         executor.shutdown();
         executor.awaitTermination();
-        assertEquals(threadCount, threadNames.size());
+        assertEquals(taskCount, threadNames.size());
     }
 
     @Test
     public void testShutdown() {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         executor.shutdown();
         assertTrue(executor.isShutdown());
     }
 
     @Test
     public void testSubmittingTaskAfterShutdown() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         executor.shutdown();
         assertThrows(RejectedExecutionException.class, () -> executor.execute(() -> {
         }));
@@ -52,7 +60,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testGracefulTerminationWithoutTasks() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         executor.shutdown();
         executor.awaitTermination();
         assertTrue(executor.isTerminated());
@@ -61,24 +69,24 @@ public class SingleThreadExecutorTest {
     @Test
     public void testGracefulTerminationWithSleepingTasks() throws InterruptedException {
         final int taskCount = 10;
-        final int sleepMillis = 100;
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+        final int sleepSeconds = 1;
+
         IntStream.range(0, taskCount)
                 .forEach(n -> executor.execute(() -> {
                     try {
-                        TimeUnit.MILLISECONDS.sleep(sleepMillis);
+                        TimeUnit.SECONDS.sleep(sleepSeconds);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
                 }));
         executor.shutdown();
-        executor.awaitTermination(); // takes about 1 second (10 * 100ms)
+        executor.awaitTermination(); // takes about 1 second
         assertTrue(executor.isTerminated());
     }
 
     @Test
     public void testImmediateTerminationWithoutTasks() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         executor.shutdownNow();
         executor.awaitTermination();
         assertTrue(executor.isTerminated());
@@ -88,7 +96,7 @@ public class SingleThreadExecutorTest {
     public void testImmediateTerminationWithSleepingTasks() throws InterruptedException {
         final int taskCount = 10;
         final int sleepSeconds = 10;
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         IntStream.range(0, taskCount)
                 .forEach(n -> executor.execute(() -> {
                     try {
@@ -97,9 +105,7 @@ public class SingleThreadExecutorTest {
                         Thread.currentThread().interrupt();
                     }
                 }));
-        TimeUnit.SECONDS.sleep(1); // wait for first task to start
-        List<Runnable> pending = executor.shutdownNow();
-        assertEquals(taskCount - 1, pending.size());
+        executor.shutdownNow(); // causes InterruptedException in sleeping tasks
         executor.awaitTermination();
         assertTrue(executor.isTerminated());
     }
@@ -107,13 +113,13 @@ public class SingleThreadExecutorTest {
     @Test
     public void testSubmit() throws InterruptedException, ExecutionException {
         final int result = 42;
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         assertEquals(result, executor.submit(() -> 42).get());
     }
 
     @Test
     public void testFutureStatesWithNormalExecution() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final Future<Void> future = executor.submit(() -> {
             try {
                 TimeUnit.SECONDS.sleep(1);
@@ -130,7 +136,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testFutureStateWithCancelledExecution() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final Future<Void> future = executor.submit(() -> {
             try {
                 TimeUnit.SECONDS.sleep(1);
@@ -148,7 +154,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testFutureStateWithFailedExecution() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final Future<Void> future = executor.submit(() -> {
             throw new RuntimeException("failure");
         });
@@ -161,29 +167,27 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testFutureResultWithInterruptedExecution() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final Future<Void> future = executor.submit(() -> {
-            TimeUnit.SECONDS.sleep(10);
+            TimeUnit.SECONDS.sleep(1); // propagate InterruptedException
             return null;
         });
         assertEquals(Future.State.RUNNING, future.state());
-        TimeUnit.SECONDS.sleep(1); // wait for task to start
-        List<Runnable> pending = executor.shutdownNow();
-        assertTrue(pending.isEmpty());
+        executor.shutdownNow(); // interrupts sleeping task
         executor.awaitTermination();
         assertThrows(ExecutionException.class, future::get);
     }
 
     @Test
     public void testCompletableFutureAccept() throws InterruptedException {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         future.thenAccept(result -> assertEquals(42, result)).join();
     }
 
     @Test
     public void testCompletableFutureApply() {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<String> mapped = future.thenApply(Object::toString);
         assertEquals("42", mapped.join());
@@ -191,7 +195,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testCompletableFutureCompose() {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<String> composed = future
                 .thenCompose(result -> executor.submit(() -> result.toString()));
@@ -200,7 +204,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testCompletableFutureApplyAsync() {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<String> mapped = future.thenApplyAsync(Object::toString, executor);
         assertEquals("42", mapped.join());
@@ -208,7 +212,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testCompletableFutureExceptionally() {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final CompletableFuture<Integer> future = executor.submit(() -> {
             throw new RuntimeException("failure");
         });
@@ -218,7 +222,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testCompletableFutureWhenCompleteNormally() {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<Integer> completed = future.whenComplete((result, exception) -> {
             assertEquals(42, result);
@@ -229,7 +233,7 @@ public class SingleThreadExecutorTest {
 
     @Test
     public void testCompletableFutureWhenCompleteExceptionally() {
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         final CompletableFuture<Integer> future = executor.submit(() -> {
             throw new RuntimeException("failure");
         });
@@ -243,7 +247,7 @@ public class SingleThreadExecutorTest {
     @Test
     public void testCompletableFutureAllOf() {
         final int taskCount = 10;
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         @SuppressWarnings("unchecked")
         final CompletableFuture<Integer>[] futures = IntStream.range(0, taskCount)
                 .mapToObj(n -> executor.submit(() -> n))
@@ -257,7 +261,7 @@ public class SingleThreadExecutorTest {
     @Test
     public void testCompletableFutureAnyOf() {
         final int taskCount = 10;
-        final SingleThreadExecutor executor = new SingleThreadExecutor();
+
         @SuppressWarnings("unchecked")
         final CompletableFuture<Integer>[] futures = IntStream.range(0, taskCount)
                 .mapToObj(n -> executor.submit(() -> {
@@ -266,5 +270,116 @@ public class SingleThreadExecutorTest {
                 }))
                 .toArray(CompletableFuture[]::new);
         assertEquals(0, CompletableFuture.anyOf(futures).join());
+    }
+
+    @Test
+    public void testSubmittingTasksConcurrently() throws InterruptedException {
+        final int taskCount = 10;
+        final Set<Integer> taskNumbers = new HashSet<>();
+        IntStream.range(0, taskCount)
+                .parallel()
+                .forEach(n -> executor.execute(() -> {
+                    synchronized (taskNumbers) {
+                        taskNumbers.add(n);
+                    }
+                }));
+        executor.shutdown();
+        executor.awaitTermination();
+        assertEquals(taskCount, taskNumbers.size());
+    }
+
+    @Test
+    public void testThatSubmittedTasksAreExecutedAfterShutdown() throws InterruptedException {
+        final int taskCount = 10;
+        final Set<Integer> taskNumbers = new HashSet<>();
+        IntStream.range(0, taskCount)
+                .forEach(n -> executor.submit(() -> {
+                    TimeUnit.SECONDS.sleep(1);
+                    synchronized (taskNumbers) {
+                        taskNumbers.add(n);
+                    }
+                    return n;
+                }));
+        executor.shutdown();
+        executor.awaitTermination();
+        assertEquals(taskCount, taskNumbers.size());
+    }
+
+    @Test
+    public void testThatImmediateShutdownPreventsExecution() throws InterruptedException {
+        final int taskCount = 10;
+        final Set<Integer> taskNumbers = new HashSet<>();
+        IntStream.range(0, taskCount)
+                .forEach(n -> executor.submit(() -> {
+                    TimeUnit.SECONDS.sleep(1);
+                    synchronized (taskNumbers) {
+                        taskNumbers.add(n);
+                    }
+                    return n;
+                }));
+        executor.shutdownNow();
+        executor.awaitTermination();
+        assertTrue(taskNumbers.isEmpty());
+    }
+
+    @Test
+    public void testThatCancellingOneTaskDoesNotInterfereWithOthers()
+            throws InterruptedException, ExecutionException {
+        int taskCount = 10;
+        int cancelledTask = 5;
+        Set<Integer> taskNumbers = new HashSet<>();
+        List<CompletableFuture<Integer>> futures = IntStream.range(0, taskCount)
+                .mapToObj(n -> executor.submit(() -> {
+                    try {
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return n;
+                    }
+                    synchronized (taskNumbers) {
+                        taskNumbers.add(n);
+                    }
+                    return n;
+                }))
+                .toList();
+        // cancel(true) does not interrupt with CompletableFuture
+        futures.get(cancelledTask).cancel(true);
+        executor.shutdown();
+        executor.awaitTermination();
+        assertTrue(taskNumbers.contains(cancelledTask));
+        assertEquals(taskCount, taskNumbers.size());
+        for (int i = 0; i < taskCount; i++) {
+            if (i == cancelledTask) {
+                assertTrue(futures.get(i).isCancelled());
+            } else {
+                assertEquals(i, futures.get(i).get());
+            }
+        }
+    }
+
+    @Test
+    public void testThatInterruptingOneTaskDoesNotInterfereWithOthers()
+            throws InterruptedException, ExecutionException {
+        int taskCount = 10;
+        Set<Integer> taskNumbers = new HashSet<>();
+        executor.execute(() -> {
+            Thread.currentThread().interrupt();
+        });
+        TimeUnit.MILLISECONDS.sleep(300); // wait for task to be executed
+        List<CompletableFuture<Integer>> futures = IntStream.range(1, taskCount)
+                .mapToObj(n -> executor.submit(() -> {
+                    synchronized (taskNumbers) {
+                        taskNumbers.add(n);
+                    }
+                    return n;
+                }))
+                .toList();
+        executor.shutdown();
+        executor.awaitTermination();
+        assertFalse(taskNumbers.contains(0));
+        assertEquals(taskCount - 1, taskNumbers.size());
+        for (int i = 1; i < taskCount; i++) {
+            assertEquals(i, futures.get(i - 1).get());
+        }
     }
 }

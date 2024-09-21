@@ -45,8 +45,12 @@ public class SingleThreadExecutor implements Executor {
             try {
                 task = getQueuedTask();
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
+                synchronized (this) {
+                    if (isShutdown) {
+                        break;
+                    }
+                }
+                continue;
             }
             try {
                 task.run();

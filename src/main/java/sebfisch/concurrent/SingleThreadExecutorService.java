@@ -44,8 +44,15 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
             try {
                 task = getQueuedTask();
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
+                lock.lock();
+                try {
+                    if (isShutdown) {
+                        break;
+                    }
+                } finally {
+                    lock.unlock();
+                }
+                continue;
             }
             try {
                 task.run();
@@ -65,7 +72,7 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         lock.lock();
         try {
             while (queuedTasks.isEmpty()) {
-                if (isTerminated()) {
+                if (isShutdown) {
                     throw new InterruptedException();
                 }
                 taskAvailable.await();
