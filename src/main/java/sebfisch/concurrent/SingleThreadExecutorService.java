@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class SingleThreadExecutorService extends AbstractExecutorService {
     private Thread worker;
-    private final LinkedList<Runnable> queuedTasks = new LinkedList<>();
+    private final LinkedList<Runnable> taskQueue = new LinkedList<>();
     private boolean isShutdown = false;
 
     private final Lock lock = new ReentrantLock();
@@ -31,7 +31,7 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
             if (isShutdown) {
                 throw new RejectedExecutionException("Executor has been shut down");
             }
-            queuedTasks.addLast(task);
+            taskQueue.addLast(task);
             taskAvailable.signal();
         } finally {
             lock.unlock();
@@ -40,9 +40,8 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
 
     private void runQueuedTasks() {
         while (true) {
-            Runnable task;
             try {
-                task = getQueuedTask();
+                getQueuedTask().run();
             } catch (InterruptedException e) {
                 lock.lock();
                 try {
@@ -52,10 +51,6 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
                 } finally {
                     lock.unlock();
                 }
-                continue;
-            }
-            try {
-                task.run();
             } catch (Exception exception) {
                 System.err.println(exception.getMessage());
             }
@@ -71,13 +66,13 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
     private Runnable getQueuedTask() throws InterruptedException {
         lock.lock();
         try {
-            while (queuedTasks.isEmpty()) {
+            while (taskQueue.isEmpty()) {
                 if (isShutdown) {
                     throw new InterruptedException();
                 }
                 taskAvailable.await();
             }
-            return queuedTasks.removeFirst();
+            return taskQueue.removeFirst();
         } finally {
             lock.unlock();
         }
@@ -109,10 +104,10 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         lock.lock();
         try {
             isShutdown = true;
-            final List<Runnable> pendingTasks = new ArrayList<>(queuedTasks);
-            queuedTasks.clear();
+            final List<Runnable> remainingTasks = new ArrayList<>(taskQueue);
+            taskQueue.clear();
             worker.interrupt();
-            return pendingTasks;
+            return remainingTasks;
         } finally {
             lock.unlock();
         }
@@ -122,7 +117,7 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
     public boolean isTerminated() {
         lock.lock();
         try {
-            return isShutdown && queuedTasks.isEmpty();
+            return isShutdown && taskQueue.isEmpty();
         } finally {
             lock.unlock();
         }

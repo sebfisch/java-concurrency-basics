@@ -9,7 +9,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 public class NewThreadPerTaskExecutor implements Executor {
     private boolean isShutdown = false;
-    private final List<Thread> activeThreads = new ArrayList<>();
+    private final List<Thread> activeWorkers = new ArrayList<>();
 
     @Override
     public synchronized void execute(Runnable task) {
@@ -17,7 +17,7 @@ public class NewThreadPerTaskExecutor implements Executor {
             throw new RejectedExecutionException("Executor has been shut down");
         }
         Thread worker = new Thread(() -> runTask(task));
-        activeThreads.add(worker);
+        activeWorkers.add(worker);
         worker.start();
     }
 
@@ -38,7 +38,7 @@ public class NewThreadPerTaskExecutor implements Executor {
             task.run();
         } finally {
             synchronized (this) {
-                activeThreads.remove(Thread.currentThread());
+                activeWorkers.remove(Thread.currentThread());
                 if (isTerminated()) {
                     notifyAll();
                 }
@@ -56,13 +56,13 @@ public class NewThreadPerTaskExecutor implements Executor {
 
     public synchronized void shutdownNow() {
         shutdown();
-        for (Thread worker : activeThreads) {
+        for (Thread worker : activeWorkers) {
             worker.interrupt();
         }
     }
 
     public synchronized boolean isTerminated() {
-        return isShutdown && activeThreads.isEmpty();
+        return isShutdown && activeWorkers.isEmpty();
     }
 
     public synchronized void awaitTermination() throws InterruptedException {

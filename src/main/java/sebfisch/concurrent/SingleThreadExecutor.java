@@ -10,7 +10,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 public class SingleThreadExecutor implements Executor {
     private final Thread worker;
-    private final LinkedList<Runnable> queuedTasks = new LinkedList<>();
+    private final LinkedList<Runnable> taskQueue = new LinkedList<>();
     private boolean isShutdown = false;
 
     public SingleThreadExecutor() {
@@ -23,7 +23,7 @@ public class SingleThreadExecutor implements Executor {
         if (isShutdown) {
             throw new RejectedExecutionException("Executor has been shut down");
         }
-        queuedTasks.addLast(task);
+        taskQueue.addLast(task);
         notify();
     }
 
@@ -41,36 +41,32 @@ public class SingleThreadExecutor implements Executor {
 
     private void runQueuedTasks() {
         while (true) {
-            Runnable task;
             try {
-                task = getQueuedTask();
+                getQueuedTask().run();
             } catch (InterruptedException e) {
                 synchronized (this) {
                     if (isShutdown) {
+                        Thread.currentThread().interrupt();
                         break;
                     }
                 }
-                continue;
-            }
-            try {
-                task.run();
             } catch (Exception exception) {
                 System.err.println(exception.getMessage());
             }
         }
         synchronized (this) {
-            notifyAll(); // notify threads that are waiting for termination
+            notifyAll(); // notify awaitTermination
         }
     }
 
     private synchronized Runnable getQueuedTask() throws InterruptedException {
-        while (queuedTasks.isEmpty()) {
-            if (isTerminated()) {
+        while (taskQueue.isEmpty()) {
+            if (isShutdown) {
                 throw new InterruptedException();
             }
             wait();
         }
-        return queuedTasks.removeFirst();
+        return taskQueue.removeFirst();
     }
 
     public synchronized boolean isShutdown() {
@@ -84,14 +80,14 @@ public class SingleThreadExecutor implements Executor {
 
     public synchronized List<Runnable> shutdownNow() {
         isShutdown = true;
-        final List<Runnable> pendingTasks = new ArrayList<>(queuedTasks);
-        queuedTasks.clear();
+        final List<Runnable> remainingTasks = new ArrayList<>(taskQueue);
+        taskQueue.clear();
         worker.interrupt();
-        return pendingTasks;
+        return remainingTasks;
     }
 
     public synchronized boolean isTerminated() {
-        return isShutdown && queuedTasks.isEmpty();
+        return isShutdown && taskQueue.isEmpty();
     }
 
     public synchronized void awaitTermination() throws InterruptedException {
