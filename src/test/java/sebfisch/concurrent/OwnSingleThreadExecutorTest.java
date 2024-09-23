@@ -223,7 +223,6 @@ public class OwnSingleThreadExecutorTest {
     }
 
     @Test
-    @Disabled
     public void testThatCancellingOneTaskDoesNotInterfereWithOthers()
             throws InterruptedException, ExecutionException {
         int taskCount = 10;
