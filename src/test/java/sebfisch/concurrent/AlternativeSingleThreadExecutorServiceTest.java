@@ -17,10 +17,12 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class AlternativeSingleThreadExecutorServiceTest {
     @Test
+    @Disabled
     public void testThatSameThreadIsUsedForEachTask() throws InterruptedException {
         final int taskCount = 10;
         final int threadCount = 1;
@@ -37,6 +39,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testShutdown() {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             executor.shutdown();
@@ -45,6 +48,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testSubmittingTaskAfterShutdown() throws InterruptedException {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             executor.shutdown();
@@ -54,6 +58,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testGracefulTerminationWithoutTasks() throws InterruptedException {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             executor.shutdown();
@@ -63,6 +68,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testGracefulTerminationWithSleepingTasks() throws InterruptedException {
         final int taskCount = 10;
         final int sleepMillis = 100;
@@ -82,6 +88,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testImmediateTerminationWithoutTasks() throws InterruptedException {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             executor.shutdownNow();
@@ -91,6 +98,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testImmediateTerminationWithSleepingTasks() throws InterruptedException {
         final int taskCount = 10;
         final int sleepSeconds = 10;
@@ -112,6 +120,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testSubmit() throws InterruptedException, ExecutionException {
         final int result = 42;
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
@@ -120,6 +129,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testFutureStatesWithNormalExecution() throws InterruptedException {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             final Future<Void> future = executor.submit(() -> {
@@ -138,6 +148,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testFutureStateWithCancelledExecution() throws InterruptedException {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             final Future<Void> future = executor.submit(() -> {
@@ -157,6 +168,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testFutureStateWithFailedExecution() throws InterruptedException {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             final Future<Void> future = executor.submit(() -> {
@@ -171,6 +183,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testFutureResultWithInterruptedExecution() throws InterruptedException {
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {
             final Future<Void> future = executor.submit(() -> {
@@ -187,6 +200,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testSubmittingTasksConcurrently() throws InterruptedException {
         final int taskCount = 10;
         final Set<Integer> taskNumbers = new HashSet<>();
@@ -203,6 +217,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testThatSubmittedTasksAreExecutedAfterShutdown() throws InterruptedException {
         final int taskCount = 10;
         final Set<Integer> taskNumbers = new HashSet<>();
@@ -220,6 +235,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testThatImmediateShutdownInterruptsExecution() throws InterruptedException {
         final int taskCount = 10;
         final Set<Integer> taskNumbers = new HashSet<>();
@@ -239,6 +255,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testThatCancellingOneTaskDoesNotInterfereWithOthers()
             throws InterruptedException, ExecutionException {
         int taskCount = 10;
@@ -272,6 +289,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testThatInterruptingOneTaskDoesNotInterfereWithOthers()
             throws InterruptedException, ExecutionException {
         int taskCount = 10;
@@ -299,6 +317,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
+    @Disabled
     public void testImmediateShutdownAfterGracefulShutdown() throws InterruptedException {
         int taskCount = 10;
         Set<Integer> taskNumbers = new HashSet<>();
