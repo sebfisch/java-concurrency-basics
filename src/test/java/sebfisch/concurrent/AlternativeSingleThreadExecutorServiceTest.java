@@ -220,7 +220,7 @@ public class AlternativeSingleThreadExecutorServiceTest {
     }
 
     @Test
-    public void testThatImmediateShutdownPreventsExecution() throws InterruptedException {
+    public void testThatImmediateShutdownInterruptsExecution() throws InterruptedException {
         final int taskCount = 10;
         final Set<Integer> taskNumbers = new HashSet<>();
         try (final ExecutorService executor = new AlternativeSingleThreadExecutorService()) {

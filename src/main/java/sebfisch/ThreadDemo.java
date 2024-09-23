@@ -56,7 +56,7 @@ public class ThreadDemo {
         List<String> words = new ArrayList<>();
         threads.add(new Thread(() -> {
             try {
-                TimeUnit.SECONDS.sleep(1);
+                TimeUnit.SECONDS.sleep(2);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
@@ -70,7 +70,7 @@ public class ThreadDemo {
         }));
         threads.add(new Thread(() -> {
             try {
-                TimeUnit.SECONDS.sleep(2);
+                TimeUnit.SECONDS.sleep(1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;

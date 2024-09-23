@@ -86,7 +86,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testImmediateTerminationWithoutTasks() throws InterruptedException {
-
         executor.shutdownNow();
         executor.awaitTermination();
         assertTrue(executor.isTerminated());
@@ -96,7 +95,6 @@ public class OwnNewThreadPerTaskExecutorTest {
     public void testImmediateTerminationWithSleepingTasks() throws InterruptedException {
         final int taskCount = 10;
         final int sleepSeconds = 10;
-
         IntStream.range(0, taskCount)
                 .forEach(n -> executor.execute(() -> {
                     try {
@@ -113,7 +111,6 @@ public class OwnNewThreadPerTaskExecutorTest {
     @Test
     public void testSubmit() throws InterruptedException, ExecutionException {
         final int result = 42;
-
         assertEquals(result, executor.submit(() -> 42).get());
     }
 
@@ -306,16 +303,20 @@ public class OwnNewThreadPerTaskExecutorTest {
     }
 
     @Test
-    public void testThatImmediateShutdownPreventsExecution() throws InterruptedException {
+    public void testThatImmediateShutdownInterruptsExecution() throws InterruptedException {
         final int taskCount = 10;
         final Set<Integer> taskNumbers = new HashSet<>();
         IntStream.range(0, taskCount)
-                .forEach(n -> executor.submit(() -> {
-                    TimeUnit.SECONDS.sleep(1);
+                .forEach(n -> executor.execute(() -> {
+                    try {
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
                     synchronized (taskNumbers) {
                         taskNumbers.add(n);
                     }
-                    return n;
                 }));
         executor.shutdownNow();
         executor.awaitTermination();

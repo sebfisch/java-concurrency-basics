@@ -3,8 +3,9 @@ package sebfisch.concurrent;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 public class SingleThreadExecutor implements Executor {
     private final Thread worker;
@@ -23,15 +24,9 @@ public class SingleThreadExecutor implements Executor {
         notifyAll();
     }
 
-    public <T> CompletableFuture<T> submit(Callable<T> callable) {
-        CompletableFuture<T> future = new CompletableFuture<>();
-        execute(() -> {
-            try {
-                future.complete(callable.call());
-            } catch (Exception exception) {
-                future.completeExceptionally(exception);
-            }
-        });
+    public <T> Future<T> submit(Callable<T> callable) {
+        FutureTask<T> future = new FutureTask<>(callable);
+        execute(future);
         return future;
     }
 

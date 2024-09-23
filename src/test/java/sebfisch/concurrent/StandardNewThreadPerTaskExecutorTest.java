@@ -59,7 +59,7 @@ public class StandardNewThreadPerTaskExecutorTest {
     }
 
     @Test
-    public void testThatImmediateShutdownPreventsExecution() throws InterruptedException {
+    public void testThatImmediateShutdownInterruptsExecution() throws InterruptedException {
         final int taskCount = 10;
         final Set<Integer> taskNumbers = new HashSet<>();
         IntStream.range(0, taskCount)
