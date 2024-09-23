@@ -257,12 +257,11 @@ public class OwnSingleThreadExecutorTest {
                     return n;
                 }))
                 .toList();
-        // cancel(true) does not interrupt with CompletableFuture
         futures.get(cancelledTask).cancel(true);
         executor.shutdown();
         executor.awaitTermination();
-        assertTrue(taskNumbers.contains(cancelledTask));
-        assertEquals(taskCount, taskNumbers.size());
+        assertFalse(taskNumbers.contains(cancelledTask));
+        assertEquals(taskCount - 1, taskNumbers.size());
         for (int i = 0; i < taskCount; i++) {
             if (i == cancelledTask) {
                 assertTrue(futures.get(i).isCancelled());
