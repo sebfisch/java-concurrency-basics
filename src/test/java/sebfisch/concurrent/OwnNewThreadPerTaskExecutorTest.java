@@ -30,7 +30,6 @@ public class OwnNewThreadPerTaskExecutorTest {
     @Test
     public void testThatNewThreadIsCreatedForEachTask() throws InterruptedException {
         final int taskCount = 10;
-
         final Set<String> threadNames = new HashSet<>();
         IntStream.range(0, taskCount)
                 .forEach(n -> executor.execute(() -> {
@@ -45,14 +44,12 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testShutdown() {
-
         executor.shutdown();
         assertTrue(executor.isShutdown());
     }
 
     @Test
     public void testSubmittingTaskAfterShutdown() throws InterruptedException {
-
         executor.shutdown();
         assertThrows(RejectedExecutionException.class, () -> executor.execute(() -> {
         }));
@@ -60,7 +57,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testGracefulTerminationWithoutTasks() throws InterruptedException {
-
         executor.shutdown();
         executor.awaitTermination();
         assertTrue(executor.isTerminated());
@@ -70,7 +66,6 @@ public class OwnNewThreadPerTaskExecutorTest {
     public void testGracefulTerminationWithSleepingTasks() throws InterruptedException {
         final int taskCount = 10;
         final int sleepSeconds = 1;
-
         IntStream.range(0, taskCount)
                 .forEach(n -> executor.execute(() -> {
                     try {
@@ -116,7 +111,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testFutureStatesWithNormalExecution() throws InterruptedException {
-
         final Future<Void> future = executor.submit(() -> {
             try {
                 TimeUnit.SECONDS.sleep(1);
@@ -133,7 +127,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testFutureStateWithCancelledExecution() throws InterruptedException {
-
         final Future<Void> future = executor.submit(() -> {
             try {
                 TimeUnit.SECONDS.sleep(1);
@@ -151,7 +144,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testFutureStateWithFailedExecution() throws InterruptedException {
-
         final Future<Void> future = executor.submit(() -> {
             throw new RuntimeException("failure");
         });
@@ -164,7 +156,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testFutureResultWithInterruptedExecution() throws InterruptedException {
-
         final Future<Void> future = executor.submit(() -> {
             TimeUnit.SECONDS.sleep(1); // propagate InterruptedException
             return null;
@@ -177,14 +168,12 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testCompletableFutureAccept() throws InterruptedException {
-
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         future.thenAccept(result -> assertEquals(42, result)).join();
     }
 
     @Test
     public void testCompletableFutureApply() {
-
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<String> mapped = future.thenApply(Object::toString);
         assertEquals("42", mapped.join());
@@ -192,7 +181,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testCompletableFutureCompose() {
-
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<String> composed = future
                 .thenCompose(result -> executor.submit(() -> result.toString()));
@@ -201,25 +189,23 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testCompletableFutureApplyAsync() {
-
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<String> mapped = future.thenApplyAsync(Object::toString, executor);
         assertEquals("42", mapped.join());
     }
 
     @Test
-    public void testCompletableFutureExceptionally() {
-
+    public void testCompletableFutureHandle() {
         final CompletableFuture<Integer> future = executor.submit(() -> {
             throw new RuntimeException("failure");
         });
-        final CompletableFuture<Integer> recovered = future.exceptionally(exception -> 0);
+        final CompletableFuture<Integer> recovered = future
+                .handle((result, error) -> error == null ? result : 0);
         assertEquals(0, recovered.join());
     }
 
     @Test
     public void testCompletableFutureWhenCompleteNormally() {
-
         final CompletableFuture<Integer> future = executor.submit(() -> 42);
         final CompletableFuture<Integer> completed = future.whenComplete((result, exception) -> {
             assertEquals(42, result);
@@ -230,7 +216,6 @@ public class OwnNewThreadPerTaskExecutorTest {
 
     @Test
     public void testCompletableFutureWhenCompleteExceptionally() {
-
         final CompletableFuture<Integer> future = executor.submit(() -> {
             throw new RuntimeException("failure");
         });
@@ -244,7 +229,6 @@ public class OwnNewThreadPerTaskExecutorTest {
     @Test
     public void testCompletableFutureAllOf() {
         final int taskCount = 10;
-
         @SuppressWarnings("unchecked")
         final CompletableFuture<Integer>[] futures = IntStream.range(0, taskCount)
                 .mapToObj(n -> executor.submit(() -> n))
@@ -258,7 +242,6 @@ public class OwnNewThreadPerTaskExecutorTest {
     @Test
     public void testCompletableFutureAnyOf() {
         final int taskCount = 10;
-
         @SuppressWarnings("unchecked")
         final CompletableFuture<Integer>[] futures = IntStream.range(0, taskCount)
                 .mapToObj(n -> executor.submit(() -> {
