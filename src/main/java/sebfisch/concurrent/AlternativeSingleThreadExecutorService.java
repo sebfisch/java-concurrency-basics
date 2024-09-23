@@ -32,7 +32,9 @@ public class AlternativeSingleThreadExecutorService extends AbstractExecutorServ
                 taskQueue.take().run();
             } catch (InterruptedException e) {
                 // taskQueue.take() throws InterruptedException even if taskQueue is not empty
-                // TODO Task 2.2: terminate when appropriate
+                if (isShutdown && taskQueue.isEmpty()) {
+                    break;
+                }
             } catch (Exception exception) {
                 System.err.println(exception.getMessage());
             }
@@ -41,8 +43,10 @@ public class AlternativeSingleThreadExecutorService extends AbstractExecutorServ
 
     @Override
     public void shutdown() {
-        // TODO Task 2.1: implement shutdown method
-        throw new UnsupportedOperationException();
+        isShutdown = true;
+        taskQueue.offer(() -> {
+            // submit empty task to wake up worker
+        });
     }
 
     @Override
@@ -57,13 +61,16 @@ public class AlternativeSingleThreadExecutorService extends AbstractExecutorServ
 
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        // TODO Task 2.2: implement awaitTermination method
-        throw new UnsupportedOperationException();
+        worker.join(unit.toMillis(timeout));
+        return isTerminated();
     }
 
     @Override
     public List<Runnable> shutdownNow() {
-        // TODO Task 2.3: implement shutdownNow method
-        throw new UnsupportedOperationException();
+        isShutdown = true;
+        List<Runnable> remainingTasks = new ArrayList<>();
+        taskQueue.drainTo(remainingTasks);
+        worker.interrupt();
+        return remainingTasks;
     }
 }

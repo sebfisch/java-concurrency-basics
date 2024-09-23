@@ -1,16 +1,18 @@
 package sebfisch.concurrent;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.RejectedExecutionException;
 
 public class SingleThreadExecutor implements Executor {
     private final Thread worker;
     private final LinkedList<Runnable> taskQueue = new LinkedList<>();
-    // TODO Task 1.1: add a boolean flag to indicate shutdown
+    private boolean isShutdown = false;
 
     public SingleThreadExecutor() {
         worker = new Thread(this::runQueuedTasks);
@@ -19,7 +21,9 @@ public class SingleThreadExecutor implements Executor {
 
     @Override
     public synchronized void execute(Runnable task) {
-        // TODO Task 1.1: reject tasks after shutdown
+        if (isShutdown) {
+            throw new RejectedExecutionException("Executor has been shut down");
+        }
         taskQueue.addLast(task);
         notifyAll();
     }
@@ -34,44 +38,54 @@ public class SingleThreadExecutor implements Executor {
         while (true) {
             try {
                 getQueuedTask().run();
-            } // TODO Task 1.5: terminate when appropriate by handling `InterruptedException`
-            catch (Exception exception) {
+            } catch (InterruptedException e) {
+                synchronized (this) {
+                    if (isShutdown) {
+                        break;
+                    }
+                }
+            } catch (Exception exception) {
                 System.err.println(exception.getMessage());
             }
         }
-        // TODO Task 1.4 signal threads waiting for termination
+        synchronized (this) {
+            notifyAll();
+        }
     }
 
     private synchronized Runnable getQueuedTask() throws InterruptedException {
         while (taskQueue.isEmpty()) {
-            // TODO Task 1.1: throw `InterruptedException` after shutdown
+            if (isShutdown) {
+                throw new InterruptedException();
+            }
             wait();
         }
         return taskQueue.removeFirst();
     }
 
     public synchronized void shutdown() {
-        // TODO Task 1.1: implement shutdown method
-        throw new UnsupportedOperationException();
+        isShutdown = true;
     }
 
     public synchronized boolean isShutdown() {
-        // TODO Task 1.2: implement isShutdown method
-        throw new UnsupportedOperationException();
+        return isShutdown;
     }
 
     public synchronized boolean isTerminated() {
-        // TODO Task 1.3: implement isTerminated method
-        throw new UnsupportedOperationException();
+        return isShutdown && taskQueue.isEmpty();
     }
 
     public synchronized void awaitTermination() throws InterruptedException {
-        // TODO Task 1.4: implement awaitTermination method
-        throw new UnsupportedOperationException();
+        while (!isTerminated()) {
+            wait();
+        }
     }
 
     public synchronized List<Runnable> shutdownNow() {
-        // TODO Task 1.5: implement shutdownNow method
-        throw new UnsupportedOperationException();
+        isShutdown = true;
+        final List<Runnable> remainingTasks = new ArrayList<>(taskQueue);
+        taskQueue.clear();
+        worker.interrupt();
+        return remainingTasks;
     }
 }
