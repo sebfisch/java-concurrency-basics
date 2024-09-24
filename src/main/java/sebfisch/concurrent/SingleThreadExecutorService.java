@@ -94,6 +94,9 @@ public class SingleThreadExecutorService extends AbstractExecutorService {
         try {
             isShutdown = true;
             taskAvailable.signal();
+            if (isTerminated()) {
+                terminated.signalAll();
+            }
         } finally {
             lock.unlock();
         }
