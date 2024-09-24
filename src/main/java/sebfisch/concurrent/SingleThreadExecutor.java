@@ -65,6 +65,9 @@ public class SingleThreadExecutor implements Executor {
 
     public synchronized void shutdown() {
         isShutdown = true;
+        if (isTerminated()) {
+            notifyAll();
+        }
     }
 
     public synchronized boolean isShutdown() {

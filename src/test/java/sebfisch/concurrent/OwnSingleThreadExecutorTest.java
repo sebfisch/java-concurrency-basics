@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class OwnSingleThreadExecutorTest {
