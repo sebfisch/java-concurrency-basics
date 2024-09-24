@@ -156,4 +156,19 @@ public class StandardSingleThreadExecutorTest {
         executor.awaitTermination(1, TimeUnit.HOURS);
         assertTrue(0 < taskNumbers.size() && taskNumbers.size() < taskCount);
     }
+
+    @Test
+    public void testAwaitTerminationBeforeShutdown() throws InterruptedException {
+        new Thread(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            executor.shutdown();
+        }).start();
+        executor.awaitTermination(1, TimeUnit.HOURS);
+        assertTrue(executor.isTerminated());
+    }
 }

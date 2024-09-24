@@ -65,6 +65,21 @@ public class OwnSingleThreadExecutorTest {
     }
 
     @Test
+    public void testAwaitTerminationBeforeShutdown() throws InterruptedException {
+        new Thread(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            executor.shutdown();
+        }).start();
+        executor.awaitTermination();
+        assertTrue(executor.isTerminated());
+    }
+
+    @Test
     public void testGracefulTerminationWithSleepingTasks() throws InterruptedException {
         final int taskCount = 10;
         final int sleepMillis = 100;
