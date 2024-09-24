@@ -2,6 +2,8 @@ package sebfisch.demo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -17,6 +19,18 @@ public class NewThreadPerTaskExecutor implements Executor {
         Thread worker = new Thread(() -> runTask(task));
         activeWorkers.add(worker);
         worker.start();
+    }
+
+    public <T> CompletableFuture<T> submit(Callable<T> callable) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        execute(() -> {
+            try {
+                future.complete(callable.call());
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
+            }
+        });
+        return future;
     }
 
     private void runTask(Runnable task) {
