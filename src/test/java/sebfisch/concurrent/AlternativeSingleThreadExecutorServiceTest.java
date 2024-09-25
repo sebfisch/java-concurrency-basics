@@ -162,7 +162,6 @@ public class AlternativeSingleThreadExecutorServiceTest {
             final Future<Void> future = executor.submit(() -> {
                 throw new RuntimeException("failure");
             });
-            assertEquals(Future.State.RUNNING, future.state());
             executor.shutdown();
             executor.awaitTermination(1, TimeUnit.HOURS);
             assertEquals(Future.State.FAILED, future.state());

@@ -44,9 +44,11 @@ public class AlternativeSingleThreadExecutorService extends AbstractExecutorServ
     @Override
     public void shutdown() {
         isShutdown = true;
-        taskQueue.offer(() -> {
-            // submit empty task to wake up worker
-        });
+        if (taskQueue.isEmpty()) {
+            taskQueue.offer(() -> {
+                // submit empty task to wake up worker
+            });
+        }
     }
 
     @Override
@@ -56,7 +58,7 @@ public class AlternativeSingleThreadExecutorService extends AbstractExecutorServ
 
     @Override
     public boolean isTerminated() {
-        return isShutdown && taskQueue.isEmpty() && !worker.isAlive();
+        return !worker.isAlive();
     }
 
     @Override
